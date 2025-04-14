@@ -1,5 +1,7 @@
 import * as core from '@actions/core';
 import * as tc from '@actions/tool-cache';
+import * as exec from '@actions/exec';
+import { HttpClient } from '@actions/http-client';
 
 import fs from 'fs';
 import path from 'path';
@@ -77,6 +79,12 @@ export class OracleDistribution extends JavaBase {
 
     const possibleUrls: string[] = [];
 
+    let fullVer = range;
+    if (isOnlyMajorProvided) {
+      fullVer = await this.getLatestVer(major);
+    }
+    core.debug(`range:${range} major:${major} fullVer:${fullVer}`);
+
     /**
      * NOTE
      * If only major version was provided we will check it under /latest first
@@ -84,7 +92,9 @@ export class OracleDistribution extends JavaBase {
      * otherwise we will fall back to /archive where we are guaranteed to
      * find any version if it exists
      */
+    /*
     if (isOnlyMajorProvided) {
+      const fullVer = await getLatestVer(major);
       possibleUrls.push(
         `${ORACLE_DL_BASE}/${major}/latest/jdk-${major}_${platform}-${arch}_bin.${extension}`
       );
@@ -92,6 +102,10 @@ export class OracleDistribution extends JavaBase {
 
     possibleUrls.push(
       `${ORACLE_DL_BASE}/${major}/archive/jdk-${range}_${platform}-${arch}_bin.${extension}`
+    );
+    */
+    possibleUrls.push(
+      `${ORACLE_DL_BASE}/${major}/archive/jdk-${fullVer}_${platform}-${arch}_bin.${extension}`
     );
 
     if (parseInt(major) < 17) {
@@ -102,7 +116,8 @@ export class OracleDistribution extends JavaBase {
       const response = await this.http.head(url);
 
       if (response.message.statusCode === HttpCodes.OK) {
-        return {url, version: range};
+        return {url, version: fullVer};
+        //return {url, version: range};
       }
 
       if (response.message.statusCode !== HttpCodes.NotFound) {
@@ -112,7 +127,35 @@ export class OracleDistribution extends JavaBase {
       }
     }
 
-    throw new Error(`Could not find Oracle JDK for SemVer ${range}`);
+    //throw new Error(`Could not find Oracle JDK for SemVer ${range}`);
+    core.warning(`Could not find Oracle JDK for SemVer ${fullVer}`);
+    return {version:'',url:''};
+  }
+
+  /*
+   * Get the latest ver string from oracle security baseline URL.
+   * Returns the ver string.
+   */
+  protected async getLatestVer(
+    majorVer: string
+  ): Promise<string> {
+    core.debug(`getLatestVer for ${majorVer}`);
+    const url = 'https://javadl-esd-secure.oracle.com/update/baseline.version';
+    const http = new HttpClient('ver');
+    const resp = await http.get(url);
+    const status = resp.message.statusCode;
+    let fullVer = '';
+    const body = await resp.readBody();
+    const regex = new RegExp(`^(?<ver>${majorVer}\\.\\d+\\.\\d+)$`, 'gm');
+    const matchedResult = regex.exec(body);
+    if (matchedResult) {
+      // found it
+      fullVer = matchedResult.groups!.ver;
+      core.debug(`full ver for ${majorVer}: ${fullVer}`);
+    } else {
+      core.warning(`Failed to extract java version from baseline url`);
+    }
+    return fullVer;
   }
 
   public getPlatform(platform: NodeJS.Platform = process.platform): OsVersions {

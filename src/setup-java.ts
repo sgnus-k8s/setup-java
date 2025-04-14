@@ -15,6 +15,9 @@ import {JavaInstallerOptions} from './distributions/base-models';
 
 async function run() {
   try {
+    const baseTag = 'v4.7.0';
+    core.info(`sgnus-k8s/setup-java@use-cache-test: based on actions/setup-java@${baseTag}`);
+
     const versions = core.getMultilineInput(constants.INPUT_JAVA_VERSION);
     const distributionName = core.getInput(constants.INPUT_DISTRIBUTION, {
       required: true
@@ -122,6 +125,9 @@ async function installVersion(
   }
 
   const result = await distribution.setupJava();
+  if (!result.version) {
+    return
+  }
   await toolchains.configureToolchains(
     version,
     distributionName,
