@@ -132248,6 +132248,9 @@ class JavaBase {
             else {
                 core.info('Trying to resolve the latest version from remote');
                 const javaRelease = yield this.findPackageForDownload(this.version);
+                if (!javaRelease.version) {
+                    return { version: '', path: '' };
+                }
                 core.info(`Resolved latest version as ${javaRelease.version}`);
                 if ((foundJava === null || foundJava === void 0 ? void 0 : foundJava.version) === javaRelease.version) {
                     core.info(`Resolved Java ${foundJava.version} from tool-cache`);
@@ -133705,11 +133708,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OracleDistribution = void 0;
 const core = __importStar(__nccwpck_require__(42186));
 const tc = __importStar(__nccwpck_require__(27784));
+const http_client_1 = __nccwpck_require__(96255);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const path_1 = __importDefault(__nccwpck_require__(71017));
 const base_installer_1 = __nccwpck_require__(59741);
 const util_1 = __nccwpck_require__(92629);
-const http_client_1 = __nccwpck_require__(96255);
+const http_client_2 = __nccwpck_require__(96255);
 const ORACLE_DL_BASE = 'https://download.oracle.com/java';
 class OracleDistribution extends base_installer_1.JavaBase {
     constructor(installerOptions) {
@@ -133749,6 +133753,11 @@ class OracleDistribution extends base_installer_1.JavaBase {
             const isOnlyMajorProvided = !range.includes('.');
             const major = isOnlyMajorProvided ? range : range.split('.')[0];
             const possibleUrls = [];
+            let fullVer = range;
+            if (isOnlyMajorProvided) {
+                fullVer = yield this.getLatestVer(major);
+            }
+            core.debug(`range:${range} major:${major} fullVer:${fullVer}`);
             /**
              * NOTE
              * If only major version was provided we will check it under /latest first
@@ -133756,23 +133765,61 @@ class OracleDistribution extends base_installer_1.JavaBase {
              * otherwise we will fall back to /archive where we are guaranteed to
              * find any version if it exists
              */
+            /*
             if (isOnlyMajorProvided) {
-                possibleUrls.push(`${ORACLE_DL_BASE}/${major}/latest/jdk-${major}_${platform}-${arch}_bin.${extension}`);
+              const fullVer = await getLatestVer(major);
+              possibleUrls.push(
+                `${ORACLE_DL_BASE}/${major}/latest/jdk-${major}_${platform}-${arch}_bin.${extension}`
+              );
             }
-            possibleUrls.push(`${ORACLE_DL_BASE}/${major}/archive/jdk-${range}_${platform}-${arch}_bin.${extension}`);
+        
+            possibleUrls.push(
+              `${ORACLE_DL_BASE}/${major}/archive/jdk-${range}_${platform}-${arch}_bin.${extension}`
+            );
+            */
+            possibleUrls.push(`${ORACLE_DL_BASE}/${major}/archive/jdk-${fullVer}_${platform}-${arch}_bin.${extension}`);
             if (parseInt(major) < 17) {
                 throw new Error('Oracle JDK is only supported for JDK 17 and later');
             }
             for (const url of possibleUrls) {
                 const response = yield this.http.head(url);
-                if (response.message.statusCode === http_client_1.HttpCodes.OK) {
-                    return { url, version: range };
+                if (response.message.statusCode === http_client_2.HttpCodes.OK) {
+                    return { url, version: fullVer };
+                    //return {url, version: range};
                 }
-                if (response.message.statusCode !== http_client_1.HttpCodes.NotFound) {
+                if (response.message.statusCode !== http_client_2.HttpCodes.NotFound) {
                     throw new Error(`Http request for Oracle JDK failed with status code: ${response.message.statusCode}`);
                 }
             }
-            throw new Error(`Could not find Oracle JDK for SemVer ${range}`);
+            //throw new Error(`Could not find Oracle JDK for SemVer ${range}`);
+            core.warning(`Could not find Oracle JDK for SemVer ${fullVer}`);
+            return { version: '', url: '' };
+        });
+    }
+    /*
+     * Get the latest ver string from oracle security baseline URL.
+     * Returns the ver string.
+     */
+    getLatestVer(majorVer) {
+        return __awaiter(this, void 0, void 0, function* () {
+            core.debug(`getLatestVer for ${majorVer}`);
+            const url = 'https://javadl-esd-secure.oracle.com/update/baseline.version';
+            const http = new http_client_1.HttpClient('ver');
+            const resp = yield http.get(url);
+            const status = resp.message.statusCode;
+            let fullVer = '';
+            const body = yield resp.readBody();
+            const regex = new RegExp(`^(?<ver>${majorVer}\\.\\d+\\.\\d+)$`, 'gm');
+            const matchedResult = regex.exec(body);
+            if (matchedResult) {
+                // found it
+                fullVer = matchedResult.groups.ver;
+                core.debug(`full ver for ${majorVer}: ${fullVer}`);
+            }
+            else {
+                core.warning(`Failed to extract java version from baseline url`);
+            }
+            return fullVer;
         });
     }
     getPlatform(platform = process.platform) {
@@ -134696,6 +134743,8 @@ const distribution_factory_1 = __nccwpck_require__(10924);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            const baseTag = 'v4.7.0';
+            core.info(`sgnus-k8s/setup-java@use-cache-test: based on actions/setup-java@${baseTag}`);
             const versions = core.getMultilineInput(constants.INPUT_JAVA_VERSION);
             const distributionName = core.getInput(constants.INPUT_DISTRIBUTION, {
                 required: true
@@ -134764,6 +134813,9 @@ function installVersion(version, options, toolchainId = 0) {
             throw new Error(`No supported distribution was found for input ${distributionName}`);
         }
         const result = yield distribution.setupJava();
+        if (!result.version) {
+            return;
+        }
         yield toolchains.configureToolchains(version, distributionName, result.path, toolchainIds[toolchainId]);
         core.info('');
         core.info('Java configuration:');
