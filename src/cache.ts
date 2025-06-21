@@ -7,6 +7,7 @@ import os from 'os';
 import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import * as glob from '@actions/glob';
+import * as custom from "./custom/cache";
 
 const STATE_CACHE_PRIMARY_KEY = 'cache-primary-key';
 const CACHE_MATCHED_KEY = 'cache-matched-key';
@@ -113,7 +114,13 @@ export async function restore(id: string, cacheDependencyPath: string) {
   core.saveState(STATE_CACHE_PRIMARY_KEY, primaryKey);
 
   // No "restoreKeys" is set, to start with a clear cache after dependency update (see https://github.com/actions/setup-java/issues/269)
-  const matchedKey = await cache.restoreCache(packageManager.path, primaryKey);
+  //const matchedKey = await cache.restoreCache(packageManager.path, primaryKey);
+  let matchedKey;
+  if (core.getBooleanInput('custom')) {
+    matchedKey = await custom.restoreCache(packageManager.path, primaryKey);
+  } else {
+    matchedKey = await cache.restoreCache(packageManager.path, primaryKey);
+  }
   if (matchedKey) {
     core.saveState(CACHE_MATCHED_KEY, matchedKey);
     core.setOutput('cache-hit', matchedKey === primaryKey);
@@ -146,11 +153,17 @@ export async function save(id: string) {
     return;
   }
   try {
-    await cache.saveCache(packageManager.path, primaryKey);
+    //await cache.saveCache(packageManager.path, primaryKey);
+    if (core.getBooleanInput('custom')) {
+      await custom.saveCache(packageManager.path, primaryKey);
+    } else {
+      await cache.saveCache(packageManager.path, primaryKey);
+    }
     core.info(`Cache saved with the key: ${primaryKey}`);
   } catch (error) {
     const err = error as Error;
-
+    core.info(err.message);
+    /*
     if (err.name === cache.ReserveCacheError.name) {
       core.info(err.message);
     } else {
@@ -161,6 +174,7 @@ export async function save(id: string) {
       }
       throw error;
     }
+    */
   }
 }
 

@@ -3,6 +3,10 @@ description: 'Set up a specific version of the Java JDK and add the
    command-line tools to the PATH'
 author: 'GitHub'
 inputs:
+  custom:
+    description: 'Use custom cache'
+    default: true
+    required: false
   java-version:
     description: 'The Java version to set up. Takes a whole or semver Java version. See examples of supported syntax in README file'
   java-version-file:
