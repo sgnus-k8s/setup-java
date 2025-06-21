@@ -131800,6 +131800,7 @@ const os_1 = __importDefault(__nccwpck_require__(22037));
 const cache = __importStar(__nccwpck_require__(27799));
 const core = __importStar(__nccwpck_require__(42186));
 const glob = __importStar(__nccwpck_require__(28090));
+const custom = __importStar(__nccwpck_require__(81082));
 const STATE_CACHE_PRIMARY_KEY = 'cache-primary-key';
 const CACHE_MATCHED_KEY = 'cache-matched-key';
 const CACHE_KEY_PREFIX = 'setup-java';
@@ -131888,7 +131889,14 @@ function restore(id, cacheDependencyPath) {
         core.debug(`primary key is ${primaryKey}`);
         core.saveState(STATE_CACHE_PRIMARY_KEY, primaryKey);
         // No "restoreKeys" is set, to start with a clear cache after dependency update (see https://github.com/actions/setup-java/issues/269)
-        const matchedKey = yield cache.restoreCache(packageManager.path, primaryKey);
+        //const matchedKey = await cache.restoreCache(packageManager.path, primaryKey);
+        let matchedKey;
+        if (core.getBooleanInput('custom')) {
+            matchedKey = yield custom.restoreCache(packageManager.path, primaryKey);
+        }
+        else {
+            matchedKey = yield cache.restoreCache(packageManager.path, primaryKey);
+        }
         if (matchedKey) {
             core.saveState(CACHE_MATCHED_KEY, matchedKey);
             core.setOutput('cache-hit', matchedKey === primaryKey);
@@ -131921,20 +131929,30 @@ function save(id) {
             return;
         }
         try {
-            yield cache.saveCache(packageManager.path, primaryKey);
+            //await cache.saveCache(packageManager.path, primaryKey);
+            if (core.getBooleanInput('custom')) {
+                yield custom.saveCache(packageManager.path, primaryKey);
+            }
+            else {
+                yield cache.saveCache(packageManager.path, primaryKey);
+            }
             core.info(`Cache saved with the key: ${primaryKey}`);
         }
         catch (error) {
             const err = error;
+            core.info(err.message);
+            /*
             if (err.name === cache.ReserveCacheError.name) {
-                core.info(err.message);
+              core.info(err.message);
+            } else {
+              if (isProbablyGradleDaemonProblem(packageManager, err)) {
+                core.warning(
+                  'Failed to save Gradle cache on Windows. If tar.exe reported "Permission denied", try to run Gradle with `--no-daemon` option. Refer to https://github.com/actions/cache/issues/454 for details.'
+                );
+              }
+              throw error;
             }
-            else {
-                if (isProbablyGradleDaemonProblem(packageManager, err)) {
-                    core.warning('Failed to save Gradle cache on Windows. If tar.exe reported "Permission denied", try to run Gradle with `--no-daemon` option. Refer to https://github.com/actions/cache/issues/454 for details.');
-                }
-                throw error;
-            }
+            */
         }
     });
 }
@@ -131991,6 +132009,327 @@ exports.MVN_TOOLCHAINS_FILE = 'toolchains.xml';
 exports.INPUT_MVN_TOOLCHAIN_ID = 'mvn-toolchain-id';
 exports.INPUT_MVN_TOOLCHAIN_VENDOR = 'mvn-toolchain-vendor';
 exports.DISTRIBUTIONS_ONLY_MAJOR_VERSION = ['corretto'];
+
+
+/***/ }),
+
+/***/ 59268:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.saveCache = exports.downloadCache = exports.getCacheFile = exports.getArchiveLocation = void 0;
+const core = __importStar(__nccwpck_require__(42186));
+const path = __importStar(__nccwpck_require__(71017));
+const fs_1 = __nccwpck_require__(57147);
+function getArchiveLocation() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const cacheTopDir = process.env["GHRUNNER_CACHE"];
+        if (!cacheTopDir) {
+            core.warning('getArchiveLocation: cache not available');
+            return undefined;
+        }
+        const repo = process.env["GITHUB_REPOSITORY"];
+        const ref = process.env["GITHUB_REF_NAME"];
+        const cacheDir = path.join(cacheTopDir, repo, ref);
+        core.debug(`getArchiveLocation: ${cacheDir}`);
+        return cacheDir;
+    });
+}
+exports.getArchiveLocation = getArchiveLocation;
+function getCacheFile(key) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const archiveLocation = yield getArchiveLocation();
+        //core.info(`getCacheFile: archiveLocation = ${archiveLocation}`);
+        if (!archiveLocation) {
+            return undefined;
+        }
+        const cacheFile = path.join(archiveLocation, key);
+        try {
+            const fileStat = yield fs_1.promises.stat(cacheFile);
+            if (fileStat.isFile() && fileStat.size > 0) {
+                core.debug(`getCacheFile: found ${cacheFile}`);
+                return cacheFile;
+            }
+            else {
+                core.debug(`getCacheFile: ${cacheFile} not found`);
+                return undefined;
+            }
+        }
+        catch (error) {
+            core.debug(`getCacheFile: ${error}`);
+            core.debug(`getCacheFile: ${cacheFile} not found`);
+            return undefined;
+        }
+    });
+}
+exports.getCacheFile = getCacheFile;
+function downloadCache(cacheFile, archivePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield fs_1.promises.copyFile(cacheFile, archivePath);
+    });
+}
+exports.downloadCache = downloadCache;
+function saveCache(key, archivePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const archiveLocation = yield getArchiveLocation();
+        //core.info(`saveCache: archiveLocation = ${archiveLocation}`);
+        if (archiveLocation) {
+            const cacheFile = path.join(archiveLocation, key);
+            try {
+                const dir = yield fs_1.promises.mkdir(path.dirname(cacheFile), { recursive: true, mode: '0775' });
+                core.debug(`saveCache: dir created: ${dir}`);
+                yield fs_1.promises.copyFile(archivePath, cacheFile);
+                core.debug(`saveCache: saved ${archivePath} to ${cacheFile}`);
+            }
+            catch (error) {
+                core.warning(`saveCache: failed to save archive: ${error}`);
+            }
+        }
+    });
+}
+exports.saveCache = saveCache;
+
+
+/***/ }),
+
+/***/ 81082:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// https://github.com/actions/toolkit/blob/main/packages/cache/src/cache.ts
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.saveCache = exports.restoreCache = exports.ValidationError = exports.isFeatureAvailable = exports.CacheFileSizeLimit = void 0;
+const core = __importStar(__nccwpck_require__(42186));
+const path = __importStar(__nccwpck_require__(71017));
+const utils = __importStar(__nccwpck_require__(91518));
+const tar_1 = __nccwpck_require__(56490);
+const backend = __importStar(__nccwpck_require__(59268));
+exports.CacheFileSizeLimit = 10 * Math.pow(1024, 3); // 10GiB
+/**
+ * isFeatureAvailable to check the presence of Actions cache service
+ *
+ * @returns boolean return true if Actions cache service feature is available, otherwise false
+ */
+function isFeatureAvailable() {
+    return !!process.env['GHRUNNER_CACHE'];
+}
+exports.isFeatureAvailable = isFeatureAvailable;
+class ValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ValidationError';
+        Object.setPrototypeOf(this, ValidationError.prototype);
+    }
+}
+exports.ValidationError = ValidationError;
+function checkPaths(paths) {
+    if (!paths || paths.length === 0) {
+        throw new ValidationError(`Path Validation Error: At least one directory or file path is required`);
+    }
+}
+function checkKey(key) {
+    if (key.length > 512) {
+        throw new ValidationError(`Key Validation Error: ${key} cannot be larger than 512 characters.`);
+    }
+    const regex = /^[^,]*$/;
+    if (!regex.test(key)) {
+        throw new ValidationError(`Key Validation Error: ${key} cannot contain commas.`);
+    }
+}
+/**
+ * Restores cache from keys
+ *
+ * @param paths a list of file paths to restore from the cache
+ * @param primaryKey an explicit key for restoring the cache
+ * @param restoreKeys an optional ordered list of keys to use for restoring the cache if no cache hit occurred for key
+ * @param downloadOptions cache download options
+ * @param enableCrossOsArchive an optional boolean enabled to restore on windows any cache created on any platform
+ * @returns string returns the key for the cache hit, otherwise returns undefined
+ */
+function restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArchive = false) {
+    return __awaiter(this, void 0, void 0, function* () {
+        checkPaths(paths);
+        restoreKeys = restoreKeys || [];
+        const keys = [primaryKey, ...restoreKeys];
+        core.debug('Resolved Keys:');
+        core.debug(JSON.stringify(keys));
+        if (keys.length > 10) {
+            throw new ValidationError(`Key Validation Error: Keys are limited to a maximum of 10.`);
+        }
+        for (const key of keys) {
+            checkKey(key);
+        }
+        let archivePath = '';
+        const cacheFile = yield backend.getCacheFile(primaryKey);
+        if (!cacheFile) {
+            core.debug(`Cache not found for key: ${primaryKey}`);
+            return undefined;
+        }
+        core.info(`Cache hit for: ${primaryKey}`);
+        if (options === null || options === void 0 ? void 0 : options.lookupOnly) {
+            core.info('Lookup only - skipping download');
+            return primaryKey;
+        }
+        const compressionMethod = yield utils.getCompressionMethod();
+        archivePath = path.join(yield utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
+        core.debug(`Archive Path: ${archivePath}`);
+        // Download the cache from the cache entry
+        try {
+            yield backend.downloadCache(cacheFile, archivePath);
+            const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
+            core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
+            if (core.isDebug()) {
+                yield (0, tar_1.listTar)(archivePath, compressionMethod);
+            }
+            yield (0, tar_1.extractTar)(archivePath, compressionMethod);
+            core.info('Cache restored successfully');
+            return primaryKey;
+        }
+        catch (error) {
+            core.warning(`Failed to restore: ${error.message}`);
+            return undefined;
+        }
+        finally {
+            // Try to delete the archive to save space
+            try {
+                yield utils.unlinkFile(archivePath);
+            }
+            catch (error) {
+                core.debug(`Failed to delete archive: ${error}`);
+            }
+        }
+        return undefined;
+    });
+}
+exports.restoreCache = restoreCache;
+/**
+ * Saves a list of files with the specified key
+ *
+ * @param paths a list of file paths to be cached
+ * @param key an explicit key for restoring the cache
+ * @param options cache upload options
+ * @param enableCrossOsArchive an optional boolean enabled to save cache on windows which could be restored on any platform
+ * @returns number returns cacheId if the cache was saved successfully and throws an error if save fails
+ */
+function saveCache(paths, key, options, enableCrossOsArchive = false) {
+    return __awaiter(this, void 0, void 0, function* () {
+        checkPaths(paths);
+        checkKey(key);
+        const compressionMethod = yield utils.getCompressionMethod();
+        let cacheId = -1;
+        const cachePaths = yield utils.resolvePaths(paths);
+        core.debug('Cache Paths:');
+        core.debug(`${JSON.stringify(cachePaths)}`);
+        if (cachePaths.length === 0) {
+            throw new Error(`Path Validation Error: Path(s) specified in the action for caching do(es) not exist, hence no cache is being saved.`);
+        }
+        const archiveFolder = yield utils.createTempDirectory();
+        const archivePath = path.join(archiveFolder, utils.getCacheFileName(compressionMethod));
+        core.debug(`Archive Path: ${archivePath}`);
+        try {
+            yield (0, tar_1.createTar)(archiveFolder, cachePaths, compressionMethod);
+            if (core.isDebug()) {
+                yield (0, tar_1.listTar)(archivePath, compressionMethod);
+            }
+            // check file size
+            const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
+            core.debug(`File Size: ${archiveFileSize}`);
+            if (archiveFileSize > exports.CacheFileSizeLimit) {
+                throw new Error(`Cache size of ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B) is over the ${Math.round(exports.CacheFileSizeLimit / (1024 * 1024))} MB (${exports.CacheFileSizeLimit} B) limit, not saving cache.`);
+            }
+            yield backend.saveCache(key, archivePath);
+            // dummy cacheId, if we get there without raising, it means the cache has been saved
+            cacheId = 1;
+        }
+        catch (error) {
+            const typedError = error;
+            if (typedError.name === ValidationError.name) {
+                throw error;
+            }
+            else {
+                core.warning(`Failed to save: ${typedError.message}`);
+            }
+        }
+        finally {
+            // Try to delete the archive to save space
+            try {
+                yield utils.unlinkFile(archivePath);
+            }
+            catch (error) {
+                core.debug(`Failed to delete archive: ${error}`);
+            }
+        }
+        return cacheId;
+    });
+}
+exports.saveCache = saveCache;
 
 
 /***/ }),
