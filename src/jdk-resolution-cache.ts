@@ -7,6 +7,7 @@ import {
   ChecksumMetadata,
   JavaDownloadRelease
 } from './distributions/base-models.js';
+import * as custom from './custom/cache';
 
 const STATE_JDK_RESOLUTIONS = 'jdk-resolutions';
 const JDK_RESOLUTION_KEY_VERSION = 2;
@@ -72,6 +73,9 @@ export async function restoreJdkResolution(
   // Deliberately not `isCacheFeatureAvailable()`: this is an optional
   // optimization, and the JDK cache already warns once when the service is
   // unreachable.
+  if (core.getBooleanInput('custom') && !custom.isFeatureAvailable()) {
+    return undefined;
+  }
   if (!cache.isFeatureAvailable()) {
     return undefined;
   }
@@ -86,7 +90,12 @@ export async function restoreJdkResolution(
 
   let matchedKey: string | undefined;
   try {
-    matchedKey = await cache.restoreCache([cachePath], primaryKey, [keyPrefix]);
+    //matchedKey = await cache.restoreCache([cachePath], primaryKey, [keyPrefix]);
+    if (core.getBooleanInput('custom')) {
+      matchedKey = await custom.restoreCache([cachePath], primaryKey, [keyPrefix]);
+    } else {
+      matchedKey = await cache.restoreCache([cachePath], primaryKey, [keyPrefix]);
+    }
   } catch (error) {
     core.debug(
       `Failed to restore the JDK resolution cache: ${getErrorMessage(error)}`
@@ -123,6 +132,9 @@ export function registerJdkResolution(
   request: JdkResolutionRequest,
   release: JavaDownloadRelease
 ): void {
+  if (core.getBooleanInput('custom') && !custom.isFeatureAvailable()) {
+    return;
+  }
   if (!cache.isFeatureAvailable()) {
     return;
   }
@@ -184,7 +196,12 @@ export async function saveJdkResolutionCaches(): Promise<void> {
     }
 
     try {
-      await cache.saveCache([resolution.path], resolution.key);
+      //await cache.saveCache([resolution.path], resolution.key);
+      if (core.getBooleanInput('custom')) {
+        await custom.saveCache([resolution.path], resolution.key);
+      } else {
+        await cache.saveCache([resolution.path], resolution.key);
+      }
     } catch (error) {
       // A matrix of jobs resolving the same JDK races on the same daily key, so
       // an already-reserved key is the expected outcome rather than a problem.

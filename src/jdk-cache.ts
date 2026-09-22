@@ -5,6 +5,7 @@ import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import {isCacheFeatureAvailable} from './cache-feature.js';
 import type {SignatureVerificationKey} from './distributions/base-models.js';
+import * as custom from './custom/cache';
 
 const STATE_JDK_CACHES = 'jdk-caches';
 const JDK_CACHE_KEY_VERSION = 1;
@@ -35,14 +36,20 @@ interface JdkCacheState {
 const restoredCaches: JdkCacheState[] = [];
 
 export async function restoreJdk(jdk: JdkCache): Promise<boolean> {
-  if (!jdk.path || !isCacheFeatureAvailable()) {
+  //if (!jdk.path || !isCacheFeatureAvailable()) {
+  if (!jdk.path || !isCacheFeatureAvailable() || (core.getBooleanInput('custom') && !custom.isFeatureAvailable())) {
     return false;
   }
 
   const key = buildJdkCacheKey(jdk);
   let matchedKey: string | undefined;
   try {
-    matchedKey = await cache.restoreCache([jdk.path], key);
+    //matchedKey = await cache.restoreCache([jdk.path], key);
+    if (core.getBooleanInput('custom')) {
+      matchedKey = await custom.restoreCache([jdk.path], key);
+    } else {
+      matchedKey = await cache.restoreCache([jdk.path], key);
+    }
   } catch (error) {
     core.warning(`Failed to restore JDK cache: ${(error as Error).message}`);
   }
@@ -181,7 +188,13 @@ export async function saveJdkCaches(): Promise<void> {
     }
 
     try {
-      const cacheId = await cache.saveCache([jdk.path], jdk.key);
+      //const cacheId = await cache.saveCache([jdk.path], jdk.key);
+      let cacheId;
+      if (core.getBooleanInput('custom')) {
+        cacheId = await custom.saveCache([jdk.path], jdk.key);
+      } else {
+        cacheId = await cache.saveCache([jdk.path], jdk.key);
+      }
       if (cacheId !== -1) {
         core.info(`JDK cache saved with the key: ${jdk.key}`);
       }

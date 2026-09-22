@@ -13,8 +13,12 @@ import {JavaInstallerOptions} from './distributions/base-models.js';
 import {configureProblemMatcher} from './problem-matcher.js';
 import {validateToolchainIds} from './toolchain-ids.js';
 import {isMainModule} from './is-main-module.js';
+import * as custom from './custom/cache';
 
 export async function run() {
+  const baseTag = 'v6.0.1';
+  core.info(`sgnus-k8s/setup-java@use-cache: based on actions/setup-java@${baseTag}`);
+
   const versions = core.getMultilineInput(constants.INPUT_JAVA_VERSION);
   let distributionName = core.getInput(constants.INPUT_DISTRIBUTION);
   const versionFile = core.getInput(constants.INPUT_JAVA_VERSION_FILE);
@@ -324,7 +328,8 @@ async function startCacheRestore(
   cachePath: string[]
 ): Promise<void> {
   const {isCacheFeatureAvailable} = await import('./cache-feature.js');
-  if (!isCacheFeatureAvailable()) {
+  //if (!isCacheFeatureAvailable()) {
+  if (!isCacheFeatureAvailable() || (core.getBooleanInput('custom') && !custom.isFeatureAvailable())) {
     return;
   }
 

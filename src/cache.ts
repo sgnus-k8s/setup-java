@@ -7,6 +7,7 @@ import os from 'os';
 import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import * as glob from '@actions/glob';
+import * as custom from './custom/cache';
 
 const STATE_CACHE_PRIMARY_KEY = 'cache-primary-key';
 const STATE_CACHE_PATHS = 'cache-paths';
@@ -263,7 +264,13 @@ async function restorePrimaryCache(
   primaryKey: string
 ) {
   // No "restoreKeys" is set, to start with a clear cache after dependency update (see https://github.com/actions/setup-java/issues/269)
-  const matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+  //const matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+  let matchedKey;
+  if (core.getBooleanInput('custom')) {
+    matchedKey = await custom.restoreCache(cachePaths, primaryKey);
+  } else {
+    matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+  }
   if (matchedKey) {
     core.saveState(CACHE_MATCHED_KEY, matchedKey);
     core.setOutput('cache-hit', matchedKey === primaryKey);
@@ -305,7 +312,13 @@ async function prepareAdditionalCaches(
  */
 async function restoreAdditionalCache(preparedCache: PreparedAdditionalCache) {
   const {cache: additionalCache, primaryKey} = preparedCache;
-  const matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+  //const matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+  let matchedKey;
+  if (core.getBooleanInput('custom')) {
+    matchedKey = await custom.restoreCache(additionalCache.path, primaryKey);
+  } else {
+    matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+  }
   if (matchedKey) {
     core.saveState(
       additionalCacheMatchedKeyState(additionalCache.name),
@@ -351,7 +364,13 @@ export async function save(id: string) {
     return;
   }
   try {
-    const cacheId = await cache.saveCache(cachePaths, primaryKey);
+    //const cacheId = await cache.saveCache(cachePaths, primaryKey);
+    let cacheId;
+    if (core.getBooleanInput('custom')) {
+      cacheId = await custom.saveCache(cachePaths, primaryKey);
+    } else {
+      cacheId = await cache.saveCache(cachePaths, primaryKey);
+    }
     if (cacheId === -1) {
       // saveCache returns -1 without throwing when the cache was not saved,
       // e.g. a reserve collision or a read-only token (fork PR). @actions/cache
@@ -417,7 +436,13 @@ async function saveAdditionalCache(
   }
 
   try {
-    const cacheId = await cache.saveCache(cachePaths, primaryKey);
+    //const cacheId = await cache.saveCache(cachePaths, primaryKey);
+    let cacheId;
+    if (core.getBooleanInput('custom')) {
+      cacheId = await custom.saveCache(cachePaths, primaryKey);
+    } else {
+      cacheId = await cache.saveCache(cachePaths, primaryKey);
+    }
     if (cacheId === -1) {
       core.debug(
         `${additionalCache.name} cache was not saved for the key: ${primaryKey}`
