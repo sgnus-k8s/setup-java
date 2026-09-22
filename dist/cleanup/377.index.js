@@ -16,9 +16,11 @@ export const modules = {
 /* harmony import */ var _actions_cache__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(5767);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3838);
 /* harmony import */ var _actions_glob__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(2377);
+/* harmony import */ var _custom_cache_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(8492);
 /**
  * @fileoverview this file provides methods handling dependency cache
  */
+
 
 
 
@@ -194,7 +196,14 @@ async function restore(id, cacheDependencyPath, cachePaths = []) {
 }
 async function restorePrimaryCache(packageManager, cachePaths, primaryKey) {
     // No "restoreKeys" is set, to start with a clear cache after dependency update (see https://github.com/actions/setup-java/issues/269)
-    const matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+    //const matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+    let matchedKey;
+    if (core.getBooleanInput('custom')) {
+        matchedKey = await custom.restoreCache(cachePaths, primaryKey);
+    }
+    else {
+        matchedKey = await cache.restoreCache(cachePaths, primaryKey);
+    }
     if (matchedKey) {
         core.saveState(CACHE_MATCHED_KEY, matchedKey);
         core.setOutput('cache-hit', matchedKey === primaryKey);
@@ -225,7 +234,14 @@ async function prepareAdditionalCaches(additionalCaches) {
  */
 async function restoreAdditionalCache(preparedCache) {
     const { cache: additionalCache, primaryKey } = preparedCache;
-    const matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+    //const matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+    let matchedKey;
+    if (core.getBooleanInput('custom')) {
+        matchedKey = await custom.restoreCache(additionalCache.path, primaryKey);
+    }
+    else {
+        matchedKey = await cache.restoreCache(additionalCache.path, primaryKey);
+    }
     if (matchedKey) {
         core.saveState(additionalCacheMatchedKeyState(additionalCache.name), matchedKey);
         core.info(`${additionalCache.name} cache restored from key: ${matchedKey}`);
@@ -263,7 +279,14 @@ async function save(id) {
         return;
     }
     try {
-        const cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_2__/* .saveCache */ .Io(cachePaths, primaryKey);
+        //const cacheId = await cache.saveCache(cachePaths, primaryKey);
+        let cacheId;
+        if (_actions_core__WEBPACK_IMPORTED_MODULE_3__/* .getBooleanInput */ .Vt('custom')) {
+            cacheId = await _custom_cache_js__WEBPACK_IMPORTED_MODULE_5__/* .saveCache */ .Io(cachePaths, primaryKey);
+        }
+        else {
+            cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_2__/* .saveCache */ .Io(cachePaths, primaryKey);
+        }
         if (cacheId === -1) {
             // saveCache returns -1 without throwing when the cache was not saved,
             // e.g. a reserve collision or a read-only token (fork PR). @actions/cache
@@ -312,7 +335,14 @@ async function saveAdditionalCache(packageManager, additionalCache) {
         return;
     }
     try {
-        const cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_2__/* .saveCache */ .Io(cachePaths, primaryKey);
+        //const cacheId = await cache.saveCache(cachePaths, primaryKey);
+        let cacheId;
+        if (_actions_core__WEBPACK_IMPORTED_MODULE_3__/* .getBooleanInput */ .Vt('custom')) {
+            cacheId = await _custom_cache_js__WEBPACK_IMPORTED_MODULE_5__/* .saveCache */ .Io(cachePaths, primaryKey);
+        }
+        else {
+            cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_2__/* .saveCache */ .Io(cachePaths, primaryKey);
+        }
         if (cacheId === -1) {
             _actions_core__WEBPACK_IMPORTED_MODULE_3__/* .debug */ .Yz(`${additionalCache.name} cache was not saved for the key: ${primaryKey}`);
             return;

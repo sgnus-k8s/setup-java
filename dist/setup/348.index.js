@@ -18,6 +18,8 @@ export const modules = {
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(path__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var _actions_cache__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(6971);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(3838);
+/* harmony import */ var _custom_cache_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(8492);
+
 
 
 
@@ -41,6 +43,9 @@ async function restoreJdkResolution(request) {
     // Deliberately not `isCacheFeatureAvailable()`: this is an optional
     // optimization, and the JDK cache already warns once when the service is
     // unreachable.
+    if (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom') && !_custom_cache_js__WEBPACK_IMPORTED_MODULE_5__/* .isFeatureAvailable */ .w3()) {
+        return undefined;
+    }
     if (!_actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .isFeatureAvailable */ .w3()) {
         return undefined;
     }
@@ -52,7 +57,13 @@ async function restoreJdkResolution(request) {
     const primaryKey = `${keyPrefix}${getFreshnessBucket()}`;
     let matchedKey;
     try {
-        matchedKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .restoreCache */ .P3([cachePath], primaryKey, [keyPrefix]);
+        //matchedKey = await cache.restoreCache([cachePath], primaryKey, [keyPrefix]);
+        if (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom')) {
+            matchedKey = await _custom_cache_js__WEBPACK_IMPORTED_MODULE_5__/* .restoreCache */ .P3([cachePath], primaryKey, [keyPrefix]);
+        }
+        else {
+            matchedKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .restoreCache */ .P3([cachePath], primaryKey, [keyPrefix]);
+        }
     }
     catch (error) {
         _actions_core__WEBPACK_IMPORTED_MODULE_4__/* .debug */ .Yz(`Failed to restore the JDK resolution cache: ${getErrorMessage(error)}`);
@@ -77,6 +88,9 @@ async function restoreJdkResolution(request) {
  * disk immediately and uploaded by the post-job step.
  */
 function registerJdkResolution(request, release) {
+    if (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom') && !_custom_cache_js__WEBPACK_IMPORTED_MODULE_5__/* .isFeatureAvailable */ .w3()) {
+        return;
+    }
     if (!_actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .isFeatureAvailable */ .w3()) {
         return;
     }
@@ -125,7 +139,13 @@ async function saveJdkResolutionCaches() {
             continue;
         }
         try {
-            await cache.saveCache([resolution.path], resolution.key);
+            //await cache.saveCache([resolution.path], resolution.key);
+            if (core.getBooleanInput('custom')) {
+                await custom.saveCache([resolution.path], resolution.key);
+            }
+            else {
+                await cache.saveCache([resolution.path], resolution.key);
+            }
         }
         catch (error) {
             // A matrix of jobs resolving the same JDK races on the same daily key, so

@@ -7,7 +7,7 @@ import {
   ChecksumMetadata,
   JavaDownloadRelease
 } from './distributions/base-models.js';
-import * as custom from './custom/cache';
+import * as custom from './custom/cache.js';
 
 const STATE_JDK_RESOLUTIONS = 'jdk-resolutions';
 const JDK_RESOLUTION_KEY_VERSION = 2;

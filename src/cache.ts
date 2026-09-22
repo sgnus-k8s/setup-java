@@ -7,7 +7,7 @@ import os from 'os';
 import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import * as glob from '@actions/glob';
-import * as custom from './custom/cache';
+import * as custom from './custom/cache.js';
 
 const STATE_CACHE_PRIMARY_KEY = 'cache-primary-key';
 const STATE_CACHE_PATHS = 'cache-paths';

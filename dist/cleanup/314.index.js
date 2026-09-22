@@ -43,7 +43,10 @@ function cache_feature_isCacheFeatureAvailable() {
     return false;
 }
 
+// EXTERNAL MODULE: ./src/custom/cache.ts + 2 modules
+var custom_cache = __webpack_require__(8492);
 ;// CONCATENATED MODULE: ./src/jdk-cache.ts
+
 
 
 
@@ -54,13 +57,20 @@ const STATE_JDK_CACHES = 'jdk-caches';
 const JDK_CACHE_KEY_VERSION = 1;
 const restoredCaches = (/* unused pure expression or super */ null && ([]));
 async function restoreJdk(jdk) {
-    if (!jdk.path || !isCacheFeatureAvailable()) {
+    //if (!jdk.path || !isCacheFeatureAvailable()) {
+    if (!jdk.path || !isCacheFeatureAvailable() || (core.getBooleanInput('custom') && !custom.isFeatureAvailable())) {
         return false;
     }
     const key = buildJdkCacheKey(jdk);
     let matchedKey;
     try {
-        matchedKey = await cache.restoreCache([jdk.path], key);
+        //matchedKey = await cache.restoreCache([jdk.path], key);
+        if (core.getBooleanInput('custom')) {
+            matchedKey = await custom.restoreCache([jdk.path], key);
+        }
+        else {
+            matchedKey = await cache.restoreCache([jdk.path], key);
+        }
     }
     catch (error) {
         core.warning(`Failed to restore JDK cache: ${error.message}`);
@@ -166,7 +176,14 @@ async function saveJdkCaches() {
             continue;
         }
         try {
-            const cacheId = await lib_cache/* saveCache */.Io([jdk.path], jdk.key);
+            //const cacheId = await cache.saveCache([jdk.path], jdk.key);
+            let cacheId;
+            if (lib_core/* getBooleanInput */.Vt('custom')) {
+                cacheId = await custom_cache/* saveCache */.Io([jdk.path], jdk.key);
+            }
+            else {
+                cacheId = await lib_cache/* saveCache */.Io([jdk.path], jdk.key);
+            }
             if (cacheId !== -1) {
                 lib_core/* info */.pq(`JDK cache saved with the key: ${jdk.key}`);
             }

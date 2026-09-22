@@ -31670,6 +31670,7 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 __nccwpck_require__.d(__webpack_exports__, {
   Yz: () => (/* binding */ core_debug),
   z3: () => (/* binding */ error),
+  Vt: () => (/* binding */ getBooleanInput),
   V4: () => (/* binding */ getInput),
   Gu: () => (/* binding */ getState),
   pq: () => (/* binding */ info),
@@ -31679,7 +31680,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   $e: () => (/* binding */ warning)
 });
 
-// UNUSED EXPORTS: ExitCode, addPath, endGroup, exportVariable, getBooleanInput, getIDToken, getMultilineInput, group, markdownSummary, notice, platform, saveState, setCommandEcho, setOutput, startGroup, summary, toPlatformPath, toPosixPath, toWin32Path
+// UNUSED EXPORTS: ExitCode, addPath, endGroup, exportVariable, getIDToken, getMultilineInput, group, markdownSummary, notice, platform, saveState, setCommandEcho, setOutput, startGroup, summary, toPlatformPath, toPosixPath, toWin32Path
 
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(857);
@@ -35953,12 +35954,12 @@ async function saveCaches() {
     }
     const saves = [];
     if (cache) {
-        const { save } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(377)]).then(__nccwpck_require__.bind(__nccwpck_require__, 7377));
+        const { save } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(492), __nccwpck_require__.e(377)]).then(__nccwpck_require__.bind(__nccwpck_require__, 7377));
         saves.push(save(cache));
     }
     if (cacheJdk) {
-        const { saveJdkCaches } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(314)]).then(__nccwpck_require__.bind(__nccwpck_require__, 2314));
-        const { saveJdkResolutionCaches } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(348)]).then(__nccwpck_require__.bind(__nccwpck_require__, 967));
+        const { saveJdkCaches } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(492), __nccwpck_require__.e(314)]).then(__nccwpck_require__.bind(__nccwpck_require__, 2314));
+        const { saveJdkResolutionCaches } = await Promise.all(/* import() */[__nccwpck_require__.e(767), __nccwpck_require__.e(492), __nccwpck_require__.e(348)]).then(__nccwpck_require__.bind(__nccwpck_require__, 967));
         saves.push(saveJdkCaches());
         saves.push(saveJdkResolutionCaches());
     }

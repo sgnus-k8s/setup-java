@@ -49,6 +49,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _actions_cache__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(6971);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(3838);
 /* harmony import */ var _cache_feature_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(1394);
+/* harmony import */ var _custom_cache_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(8492);
+
 
 
 
@@ -59,13 +61,20 @@ const STATE_JDK_CACHES = 'jdk-caches';
 const JDK_CACHE_KEY_VERSION = 1;
 const restoredCaches = [];
 async function restoreJdk(jdk) {
-    if (!jdk.path || !(0,_cache_feature_js__WEBPACK_IMPORTED_MODULE_5__.isCacheFeatureAvailable)()) {
+    //if (!jdk.path || !isCacheFeatureAvailable()) {
+    if (!jdk.path || !(0,_cache_feature_js__WEBPACK_IMPORTED_MODULE_5__.isCacheFeatureAvailable)() || (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom') && !_custom_cache_js__WEBPACK_IMPORTED_MODULE_6__/* .isFeatureAvailable */ .w3())) {
         return false;
     }
     const key = buildJdkCacheKey(jdk);
     let matchedKey;
     try {
-        matchedKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .restoreCache */ .P3([jdk.path], key);
+        //matchedKey = await cache.restoreCache([jdk.path], key);
+        if (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom')) {
+            matchedKey = await _custom_cache_js__WEBPACK_IMPORTED_MODULE_6__/* .restoreCache */ .P3([jdk.path], key);
+        }
+        else {
+            matchedKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .restoreCache */ .P3([jdk.path], key);
+        }
     }
     catch (error) {
         _actions_core__WEBPACK_IMPORTED_MODULE_4__/* .warning */ .$e(`Failed to restore JDK cache: ${error.message}`);
@@ -171,7 +180,14 @@ async function saveJdkCaches() {
             continue;
         }
         try {
-            const cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .saveCache */ .Io([jdk.path], jdk.key);
+            //const cacheId = await cache.saveCache([jdk.path], jdk.key);
+            let cacheId;
+            if (_actions_core__WEBPACK_IMPORTED_MODULE_4__/* .getBooleanInput */ .Vt('custom')) {
+                cacheId = await _custom_cache_js__WEBPACK_IMPORTED_MODULE_6__/* .saveCache */ .Io([jdk.path], jdk.key);
+            }
+            else {
+                cacheId = await _actions_cache__WEBPACK_IMPORTED_MODULE_3__/* .saveCache */ .Io([jdk.path], jdk.key);
+            }
             if (cacheId !== -1) {
                 _actions_core__WEBPACK_IMPORTED_MODULE_4__/* .info */ .pq(`JDK cache saved with the key: ${jdk.key}`);
             }

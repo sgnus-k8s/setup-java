@@ -13,7 +13,7 @@ import {JavaInstallerOptions} from './distributions/base-models.js';
 import {configureProblemMatcher} from './problem-matcher.js';
 import {validateToolchainIds} from './toolchain-ids.js';
 import {isMainModule} from './is-main-module.js';
-import * as custom from './custom/cache';
+import * as custom from './custom/cache.js';
 
 export async function run() {
   const baseTag = 'v6.0.1';

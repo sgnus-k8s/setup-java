@@ -2,8 +2,8 @@
 
 import * as core from '@actions/core';
 import * as path from 'path';
-import * as utils from './utils';
-import * as backend from './backend';
+import * as utils from './utils.js';
+import * as backend from './backend.js';
 
 // from https://github.com/actions/toolkit/blob/main/packages/cache/src/options.ts
 //
