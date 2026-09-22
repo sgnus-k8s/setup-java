@@ -5,7 +5,7 @@ import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import {isCacheFeatureAvailable} from './cache-feature.js';
 import type {SignatureVerificationKey} from './distributions/base-models.js';
-import * as custom from './custom/cache';
+import * as custom from './custom/cache.js';
 
 const STATE_JDK_CACHES = 'jdk-caches';
 const JDK_CACHE_KEY_VERSION = 1;
